@@ -3,7 +3,6 @@ require 'dalli'
 require 'gchart'
 require 'haml'
 
-
 require 'amnesia/host'
 require 'core_ext/array'
 
@@ -11,9 +10,9 @@ module Amnesia
   class << self
     attr_accessor :config
   end
-  
+
   class Application < Sinatra::Base
-    set :public, File.join(File.dirname(__FILE__), 'amnesia', 'public')
+    set :public_folder, File.join(File.dirname(__FILE__), 'amnesia', 'public')
     set :views, File.join(File.dirname(__FILE__), 'amnesia', 'views')
 
     def initialize(app, configuration = {})
@@ -24,12 +23,12 @@ module Amnesia
       Amnesia.config[:hosts] ||= ['127.0.0.1:11211']
       super(app)
     end
-    
+
     helpers do
       def graph_url(data = [])
         GChart.pie(:data => data, :size => '115x115').to_url
       end
-      
+
       def number_to_human_size(size, precision=1)
         return '0' if size == 0
         units = %w{B KB MB GB TB}
@@ -56,10 +55,11 @@ module Amnesia
         end
       end
     end
-    
+
     get '/amnesia' do
       protected!
       @hosts = Amnesia.config[:hosts].map{|host| Amnesia::Host.new(host)}
+      @hosts = @hosts.select{|host| host.alive? }
       haml :index
     end
 
